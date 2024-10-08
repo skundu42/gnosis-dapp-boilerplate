@@ -1,95 +1,110 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
-export default function Home() {
+import { Typography, Space, Card, Layout, Row, Col } from 'antd';
+import { AppstoreOutlined, SafetyOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'; // Importing Ant Design icons
+import AppHeader from './components/Header'; 
+
+const { Title, Text } = Typography;
+const { Content } = Layout;
+
+export default function Main() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <Layout
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #f0f2f5, #ffffff)', // Light gradient background
+      }}
+    >
+      <AppHeader />
+      <Content
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '40px',
+        }}
+      >
+        <div style={{ maxWidth: '800px', width: '100%', textAlign: 'center' }}>
+          <Row gutter={[32, 32]} justify="center">
+            <Col xs={24} sm={12}>
+              <Card
+                title={
+                  <Space>
+                    <AppstoreOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+                    <Title level={4} style={{ marginBottom: '0', color: '#001529' }}>ERC1155</Title>
+                  </Space>
+                }
+                bordered={false}
+                style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #e0f7fa, #ffffff)',
+                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.1)',
+                  transition: 'transform 0.3s ease',
+                  minHeight: '250px', 
+                }}
+                hoverable
+              >
+                <Text style={{ fontSize: '16px', color: '#001529' }}>
+                  Explore ERC1155 token features such as minting and managing multiple token types.
+                </Text>
+              </Card>
+            </Col>
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
+            <Col xs={24} sm={12}>
+              <Card
+                title={
+                  <Space>
+                    <SafetyOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+                    <Title level={4} style={{ marginBottom: '0', color: '#001529' }}>Hashi</Title>
+                  </Space>
+                }
+                bordered={false}
+                style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #e0f7fa, #ffffff)',
+                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.1)',
+                  transition: 'transform 0.3s ease',
+                  minHeight: '250px', 
+                }}
+                hoverable
+              >
+                <Text style={{ fontSize: '16px', color: '#001529' }}>
+                  Explore the functionalities of Hashi, an EVM hash oracle aggregator.
+                </Text>
+              </Card>
+            </Col>
+
+            <Col xs={24} sm={12}>
+              <Card
+                title={
+                  <Space>
+                    <LockOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+                    <Title level={4} style={{ marginBottom: '0', color: '#001529' }}>
+                      Shutterized Gnosis Chain
+                    </Title>
+                  </Space>
+                }
+                bordered={false}
+                style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #e0f7fa, #ffffff)',
+                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.1)',
+                  transition: 'transform 0.3s ease',
+                  minHeight: '250px', 
+                }}
+                hoverable
+              >
+                <Text style={{ fontSize: '16px', color: '#001529' }}>
+                  Utilize Shutterized Gnosis Chain for enhanced privacy and secure transactions.
+                </Text>
+              </Card>
+            </Col>
+          </Row>
         </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </Content>
+    </Layout>
   );
 }

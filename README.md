@@ -1,8 +1,8 @@
 # Gnosis Boilerplate dApp
-This is a demo boierplate application meant for developers to get an idea of Gnosis products and its various integrations.
+This is a demo boilerplate application meant for developers to get an idea of Gnosis products and its various integrations.
 
 This boilerplate application has examples of:
-- ERC- 1155 (A Token standard extensively used by the Circles protocol)
+- ERC - 1155 (A Token standard extensively used by the Circles protocol)
 - Hashi 
 - Shutterized Gnosis Chain example
 

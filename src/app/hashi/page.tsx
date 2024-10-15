@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
 import { getWeb3Provider, getSigner } from '@dynamic-labs/ethers-v6';
 import { Button, Typography, Card, Form, Input, message as antdMessage } from 'antd';
@@ -73,9 +73,7 @@ export default function Main() {
   const [loading, setLoading] = useState(false);
   const [lastMessage, setLastMessage] = useState<string>('');
   const [fetchingMessage, setFetchingMessage] = useState<boolean>(false);
-  // const [signingMessage, setSigningMessage] = useState(false);
-  // const [signedMessage, setSignedMessage] = useState<string>('');
-
+  
   const sendMessageToChiado = async (messageText: string) => {
     if (!primaryWallet) {
       antdMessage.error('No wallet connected. Please connect your wallet.');

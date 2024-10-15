@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSigner } from '@dynamic-labs/ethers-v6';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
-import { Button, Input, Form, message, Layout, Typography, Card, Row, Col, Select, notification, Spin, Steps } from 'antd';
+import { Button, Form, message, Layout, Typography, Card, Row, Col, Select, notification, Spin, Steps } from 'antd';
 import { keccak256, toUtf8Bytes } from 'ethers';
 import AppHeader from '../components/Header';
 import axios from 'axios';
@@ -25,7 +25,7 @@ const ShutterizedRPS = () => {
 
   const apiBaseUrl = 'https://nanoshutter.staging.shutter.network';
 
-  const handlePlayerMove = async (player, move) => {
+  const handlePlayerMove = async (player: string, move: string) => {
     if (!primaryWallet) {
       message.error('No wallet connected. Please connect your wallet.');
       return;
@@ -105,7 +105,7 @@ const ShutterizedRPS = () => {
             });
           }
         }
-      } catch (e) {
+      } catch (e:any) {
         if (e.response && e.response.status === 400) {
           setCurrentStep(2);
         } else {
@@ -128,7 +128,7 @@ const ShutterizedRPS = () => {
     setCurrentStep(0);
   };
 
-  const determineWinner = (move1, move2) => {
+  const determineWinner = (move1: string, move2: string) => {
     if (move1 === move2) {
       return "It's a tie!";
     }
@@ -144,7 +144,7 @@ const ShutterizedRPS = () => {
     }
   };
 
-  const getCardStyle = (player) => {
+  const getCardStyle = (player: string) => {
     if (gameResult.includes(player)) {
       return {
         padding: '40px 20px',

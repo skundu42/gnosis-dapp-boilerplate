@@ -1,7 +1,7 @@
 "use client";
 
 import { Typography, Space, Card, Layout, Row, Col } from 'antd';
-import { AppstoreOutlined, SafetyOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'; // Importing Ant Design icons
+import { AppstoreOutlined, SafetyOutlined, LockOutlined } from '@ant-design/icons'; // Importing Ant Design icons
 import AppHeader from './components/Header'; 
 
 const { Title, Text } = Typography;

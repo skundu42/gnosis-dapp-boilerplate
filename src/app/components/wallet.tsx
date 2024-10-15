@@ -1,8 +1,6 @@
 import React from 'react';
 import { DynamicWidget } from '../lib/dynamic';
-import { Typography } from 'antd';
 
-const { Title } = Typography;
 
 export const DynamicWidgetButton: React.FC = () => {
   return (

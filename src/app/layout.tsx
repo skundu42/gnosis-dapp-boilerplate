@@ -71,7 +71,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <DynamicContextProvider
           settings={{
-            environmentId: "299c3720-c413-49cb-bc32-ab64b2244bc4",
+            environmentId: "<USE YOUR OWN KEY>",
             walletConnectors: [EthereumWalletConnectors],
             overrides: { evmNetworks },
           }}

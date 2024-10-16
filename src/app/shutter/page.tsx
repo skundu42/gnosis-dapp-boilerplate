@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { getSigner } from '@dynamic-labs/ethers-v6';
@@ -6,7 +6,6 @@ import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
 import { Button, Form, message, Layout, Typography, Card, Row, Col, Select, notification, Spin, Steps } from 'antd';
 import { keccak256, toUtf8Bytes } from 'ethers';
 import AppHeader from '../components/Header';
-import axios from 'axios';
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -22,8 +21,6 @@ const ShutterizedRPS = () => {
   const [loadingPlayer1, setLoadingPlayer1] = useState(false);
   const [loadingPlayer2, setLoadingPlayer2] = useState(false);
   const [encryptionTimestamp, setEncryptionTimestamp] = useState(Math.floor(Date.now() / 1000) + 20);
-
-  const apiBaseUrl = 'https://nanoshutter.staging.shutter.network';
 
   const handlePlayerMove = async (player: string, move: string) => {
     if (!primaryWallet) {
@@ -47,16 +44,16 @@ const ShutterizedRPS = () => {
         description: `Move transaction for ${player} has been sent. Tx Hash: ${tx.hash}`,
       });
 
-      const response = await axios.post(`${apiBaseUrl}/encrypt/with_time`, {
-        cypher_text: move,
-        timestamp: encryptionTimestamp,
+      const response = await fetch('/api/encryption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'encrypt', message: move, timestamp: encryptionTimestamp }),
       });
 
-      if (response.status !== 200) {
-        throw new Error('Encryption service returned an error');
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Encryption service returned an error');
 
-      const encryptedMove = response.data.message;
+      const encryptedMove = data.encryptedMessage;
       setEncryptedData((prevData) => ({ ...prevData, [player]: encryptedMove }));
       setCurrentStep(currentStep + 1);
 
@@ -75,44 +72,45 @@ const ShutterizedRPS = () => {
   useEffect(() => {
     const intervalId = setInterval(async () => {
       try {
-        if (!gameInProgress) return;
+        if (!gameInProgress || !encryptedData.player1 || !encryptedData.player2) return;
 
-        if (encryptedData.player1 && encryptedData.player2) {
-          if (!decryptedMoves.player1) {
-            const response = await axios.post(`${apiBaseUrl}/decrypt/with_time`, {
-              encrypted_msg: encryptedData.player1,
-              timestamp: encryptionTimestamp,
-            });
-            setDecryptedMoves((prevMoves) => ({ ...prevMoves, player1: response.data.message }));
-          }
-          if (!decryptedMoves.player2) {
-            const response = await axios.post(`${apiBaseUrl}/decrypt/with_time`, {
-              encrypted_msg: encryptedData.player2,
-              timestamp: encryptionTimestamp,
-            });
-            setDecryptedMoves((prevMoves) => ({ ...prevMoves, player2: response.data.message }));
-          }
+        if (!decryptedMoves.player1) {
+          const response = await fetch('/api/encryption', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'decrypt', encryptedMsg: encryptedData.player1, timestamp: encryptionTimestamp }),
+          });
 
-          if (decryptedMoves.player1 && decryptedMoves.player2) {
-            const result = determineWinner(decryptedMoves.player1, decryptedMoves.player2);
-            setGameResult(result);
-            setCurrentStep(3);
-            setGameInProgress(false);
-
-            notification.success({
-              message: 'Game Result',
-              description: `The game has concluded. ${result}`,
-            });
-          }
+          const data = await response.json();
+          setDecryptedMoves((prevMoves) => ({ ...prevMoves, player1: data.decryptedMessage }));
         }
-      } catch (e:any) {
-        if (e.response && e.response.status === 400) {
-          setCurrentStep(2);
-        } else {
-          console.error('Error during decryption:', e);
-          setGameInProgress(false);
+
+        if (!decryptedMoves.player2) {
+          const response = await fetch('/api/encryption', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'decrypt', encryptedMsg: encryptedData.player2, timestamp: encryptionTimestamp }),
+          });
+
+          const data = await response.json();
+          setDecryptedMoves((prevMoves) => ({ ...prevMoves, player2: data.decryptedMessage }));
+        }
+
+        if (decryptedMoves.player1 && decryptedMoves.player2) {
+          const result = determineWinner(decryptedMoves.player1, decryptedMoves.player2);
+          setGameResult(result);
           setCurrentStep(3);
+          setGameInProgress(false);
+
+          notification.success({
+            message: 'Game Result',
+            description: `The game has concluded. ${result}`,
+          });
         }
+      } catch (error) {
+        console.error('Error during decryption:', error);
+        setGameInProgress(false);
+        setCurrentStep(3);
       }
     }, 5000);
 
@@ -129,38 +127,22 @@ const ShutterizedRPS = () => {
   };
 
   const determineWinner = (move1: string, move2: string) => {
-    if (move1 === move2) {
-      return "It's a tie!";
-    }
-
+    if (move1 === move2) return "It's a tie!";
     if (
       (move1 === 'Rock' && move2 === 'Scissors') ||
       (move1 === 'Paper' && move2 === 'Rock') ||
       (move1 === 'Scissors' && move2 === 'Paper')
-    ) {
-      return 'Player 1 wins!';
-    } else {
-      return 'Player 2 wins!';
-    }
+    ) return 'Player 1 wins!';
+    return 'Player 2 wins!';
   };
 
-  const getCardStyle = (player: string) => {
-    if (gameResult.includes(player)) {
-      return {
-        padding: '40px 20px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-        borderRadius: '10px',
-        backgroundColor: '#fff',
-        border: '2px solid green',
-      };
-    }
-    return {
-      padding: '40px 20px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-      borderRadius: '10px',
-      backgroundColor: '#fff',
-    };
-  };
+  const getCardStyle = (player: string) => ({
+    padding: '40px 20px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+    borderRadius: '10px',
+    backgroundColor: '#fff',
+    border: gameResult.includes(player) ? '2px solid green' : 'none',
+  });
 
   return (
     <Layout style={{ height: '100vh', backgroundColor: '#f0f2f5' }}>
@@ -171,9 +153,7 @@ const ShutterizedRPS = () => {
           <Title level={1} style={{ marginBottom: '40px', color: '#001529', textAlign: 'center' }}>Shutterized Rock Paper Scissors</Title>
           <Row gutter={24}>
             <Col xs={24} md={12}>
-              <Card
-                style={getCardStyle('Player 1')}
-              >
+              <Card style={getCardStyle('Player 1')}>
                 <Title level={3} style={{ marginBottom: '20px' }}>Player 1</Title>
                 <Form layout="vertical" onFinish={(values) => handlePlayerMove('player1', values.move)}>
                   <Form.Item name="move" label="Choose your move" required>
@@ -190,9 +170,7 @@ const ShutterizedRPS = () => {
               </Card>
             </Col>
             <Col xs={24} md={12}>
-              <Card
-                style={getCardStyle('Player 2')}
-              >
+              <Card style={getCardStyle('Player 2')}>
                 <Title level={3} style={{ marginBottom: '20px' }}>Player 2</Title>
                 <Form layout="vertical" onFinish={(values) => handlePlayerMove('player2', values.move)}>
                   <Form.Item name="move" label="Choose your move" required>

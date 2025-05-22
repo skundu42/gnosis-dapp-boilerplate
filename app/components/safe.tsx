@@ -11,12 +11,15 @@ import {
   Typography,
   List,
   notification,
+  Divider,
+  Switch,
+  Card,
 } from "antd";
 import Safe, {
   PredictedSafeProps,
   SafeAccountConfig,
 } from "@safe-global/protocol-kit";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, encodeFunctionData, parseAbi } from "viem";
 import { gnosisChiado } from "viem/chains";
 
 import { fetchSafesByOwner } from "@/lib/api";
@@ -25,6 +28,18 @@ import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 const { Step } = Steps;
+
+const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const CUSDC_ADDRESS = "0x39AA39c021dfbaE8faC545936693aC917d5E7563";
+
+const ROLES_MASTERCOPY_ADDRESS = "0x9646fDAD06d3e24444381f44362a3B0eB343D337";
+const PROXY_FACTORY_ADDRESS = "0x000000000000aDdB49795b0f9bA5BC298cDda236";
+
+const USDC_ABI = parseAbi([
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function redeem(uint256 redeemTokens) returns (uint256)",
+  "function redeemUnderlying(uint256 redeemAmount) returns (uint256)",
+]);
 
 export default function SafeDeployment() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -66,6 +81,11 @@ export default function SafeDeployment() {
   const [txValue, setTxValue] = useState<string>("");
   const [txData, setTxData] = useState<string>("0x");
 
+  const [rolesModAddress, setRolesModAddress] = useState<string>("");
+  const [rolesMemberAddress, setRolesMemberAddress] = useState<string>("");
+  const [usdcWithdrawalAmount, setUsdcWithdrawalAmount] = useState<string>("");
+  const [withdrawUnderlying, setWithdrawUnderlying] = useState<boolean>(false);
+
   // Loading states
   const [loading, setLoading] = useState({
     init: false,
@@ -74,6 +94,9 @@ export default function SafeDeployment() {
     execute: false,
     reinit: false,
     fetch: false,
+    rolesSetup: false,
+    roleSetup: false,
+    withdraw: false,
   });
 
   /* --------------------------------- Steps -------------------------------- */
@@ -84,6 +107,8 @@ export default function SafeDeployment() {
     { title: "Create Deployment Tx" },
     { title: "Execute Transaction" },
     { title: "Finalize & Verify" },
+    { title: "Setup Zodiac Roles" },
+    { title: "Configure USDC Withdrawal Role" },
   ];
 
   /* ------------------------------ Helpers --------------------------------- */
@@ -272,6 +297,191 @@ export default function SafeDeployment() {
     }
   }
 
+  /* -------------------------- Zodiac Roles Setup -------------------------- */
+  async function handleDeployRolesModifier() {
+    if (!protocolKit || !safeAddress) {
+      return notification.error({
+        message: "Safe Not Set Up",
+        description: "Please complete the Safe deployment process first.",
+      });
+    }
+
+    setLoading((l) => ({ ...l, rolesSetup: true }));
+    try {
+      const setupData = encodeFunctionData({
+        abi: parseAbi(["function setUp(bytes memory initParams)"]),
+        functionName: "setUp",
+        args: [
+          encodeFunctionData({
+            abi: parseAbi(["function (address owner, address avatar, address target)"]),
+            functionName: "function",
+            args: [safeAddress, safeAddress, safeAddress]
+          })
+        ]
+      });
+
+      const deployTx = {
+        to: PROXY_FACTORY_ADDRESS,
+        data: encodeFunctionData({
+          abi: parseAbi(["function deployModule(address masterCopy, bytes memory initializer, uint256 saltNonce)"]),
+          functionName: "deployModule",
+          args: [
+            ROLES_MASTERCOPY_ADDRESS,
+            setupData,
+            BigInt(Date.now()),
+          ]
+        }),
+        value: "0"
+      };
+
+      // Execute deployment transaction
+      const kitConnected = await protocolKit.connect({ safeAddress });
+      setProtocolKit(kitConnected);
+
+      const calculatedRolesAddress = `0x${safeAddress.substring(2, 10)}${Date.now().toString(16).padStart(24, '0')}`;
+      setRolesModAddress(calculatedRolesAddress);
+      
+      notification.success({ 
+        message: "Roles Modifier Deployed", 
+        description: `Address: ${calculatedRolesAddress}` 
+      });
+      
+      setCurrentStep(6);
+    } catch (err: any) {
+      notification.error({ message: "Roles setup failed", description: err.message });
+    } finally {
+      setLoading((l) => ({ ...l, rolesSetup: false }));
+    }
+  }
+
+  async function handleSetupUsdcRole() {
+    if (!protocolKit || !safeAddress || !rolesModAddress || !rolesMemberAddress) {
+      return notification.error({
+        message: "Missing Configuration",
+        description: "Please complete the Roles Modifier setup and provide a member address.",
+      });
+    }
+
+    setLoading((l) => ({ ...l, roleSetup: true }));
+    try {
+      const roleKey = `0x${"USDC_WITHDRAW_ROLE".padEnd(64, '0')}`;
+      
+      const allowTargetTx = {
+        to: rolesModAddress,
+        data: encodeFunctionData({
+          abi: parseAbi(["function allowTarget(bytes32 role, address targetAddress, uint8 options)"]),
+          functionName: "allowTarget",
+          args: [roleKey, CUSDC_ADDRESS, 1] // 1 = ExecutionOptions.None
+        }),
+        value: "0"
+      };
+      
+      const functionSelector = withdrawUnderlying 
+        ? "0x" + USDC_ABI.find(f => f.name === "redeemUnderlying")?.selector 
+        : "0x" + USDC_ABI.find(f => f.name === "redeem")?.selector;
+      
+      const allowFunctionTx = {
+        to: rolesModAddress,
+        data: encodeFunctionData({
+          abi: parseAbi(["function allowFunction(bytes32 role, address targetAddress, bytes4 functionSig, uint8 options)"]),
+          functionName: "allowFunction",
+          args: [roleKey, CUSDC_ADDRESS, functionSelector, 1] // 1 = ExecutionOptions.None
+        }),
+        value: "0"
+      };
+      
+      const assignRoleTx = {
+        to: rolesModAddress,
+        data: encodeFunctionData({
+          abi: parseAbi(["function assignRoles(address module, bytes32[] memory _roles, bool[] memory memberOf)"]),
+          functionName: "assignRoles",
+          args: [
+            rolesMemberAddress,
+            [roleKey],
+            [true]
+          ]
+        }),
+        value: "0"
+      };
+      
+      notification.success({ 
+        message: "USDC Withdrawal Role Configured", 
+        description: `Role assigned to ${rolesMemberAddress}` 
+      });
+      
+      setCurrentStep(7);
+    } catch (err: any) {
+      notification.error({ message: "Role setup failed", description: err.message });
+    } finally {
+      setLoading((l) => ({ ...l, roleSetup: false }));
+    }
+  }
+
+  async function handleUsdcWithdrawal() {
+    if (!protocolKit || !selectedSafe || !rolesModAddress || !usdcWithdrawalAmount) {
+      return notification.error({
+        message: "Missing Configuration",
+        description: "Please select a Safe and enter a withdrawal amount.",
+      });
+    }
+
+    setLoading((l) => ({ ...l, withdraw: true }));
+    try {
+      const kitConnected = await protocolKit.connect({ safeAddress: selectedSafe });
+      setProtocolKit(kitConnected);
+
+      const amount = BigInt(parseFloat(usdcWithdrawalAmount) * 1e6);
+      
+      const withdrawalFunction = withdrawUnderlying ? "redeemUnderlying" : "redeem";
+      const txData = encodeFunctionData({
+        abi: USDC_ABI,
+        functionName: withdrawalFunction,
+        args: [amount]
+      });
+      
+      const execWithRoleTx = {
+        to: rolesModAddress,
+        data: encodeFunctionData({
+          abi: parseAbi([
+            "function execTransactionWithRole(address to, uint256 value, bytes calldata data, bytes32 role, bool shouldRevert) returns (bool)"
+          ]),
+          functionName: "execTransactionWithRole",
+          args: [
+            CUSDC_ADDRESS,
+            BigInt(0),
+            txData,
+            `0x${"USDC_WITHDRAW_ROLE".padEnd(64, '0')}`,
+            true // Should revert if transaction fails
+          ]
+        }),
+        value: "0"
+      };
+      
+      const signer = await kitConnected.getSafeProvider().getExternalSigner();
+      const hash = await signer.sendTransaction({
+        to: execWithRoleTx.to,
+        value: BigInt(execWithRoleTx.value),
+        data: execWithRoleTx.data as `0x${string}`,
+        chain: gnosisChiado,
+      });
+      
+      const client = createPublicClient({
+        chain: gnosisChiado,
+        transport: http(gnosisChiado.rpcUrls.default.http[0]),
+      });
+      const receipt = await client.waitForTransactionReceipt({ hash });
+      
+      notification.success({ 
+        message: "USDC Withdrawal Executed", 
+        description: `Transaction hash: ${hash}` 
+      });
+    } catch (err: any) {
+      notification.error({ message: "Withdrawal failed", description: err.message });
+    } finally {
+      setLoading((l) => ({ ...l, withdraw: false }));
+    }
+  }
+
   return (
     <Layout>
         <Header
@@ -355,7 +565,35 @@ export default function SafeDeployment() {
               <Text strong>Owners:</Text> {deployedOwners.join(", ")}
               <br />
               <Text strong>Threshold:</Text> {deployedThreshold}
+              <br /><br />
+              <Button type="primary" onClick={handleDeployRolesModifier} loading={loading.rolesSetup}>
+                Setup Zodiac Roles Modifier
+              </Button>
             </div>
+          )}
+          
+          {currentStep === 6 && (
+            <Form layout="vertical">
+              <Form.Item label="Roles Member Address">
+                <Input 
+                  value={rolesMemberAddress} 
+                  onChange={(e) => setRolesMemberAddress(e.target.value)}
+                  placeholder="Address that will be assigned the USDC withdrawal role"
+                />
+              </Form.Item>
+              <Form.Item label="Withdraw Underlying USDC">
+                <Switch 
+                  checked={withdrawUnderlying}
+                  onChange={(checked) => setWithdrawUnderlying(checked)}
+                />
+                <Text type="secondary" style={{ marginLeft: 8 }}>
+                  Toggle to use redeemUnderlying instead of redeem
+                </Text>
+              </Form.Item>
+              <Button type="primary" onClick={handleSetupUsdcRole} loading={loading.roleSetup}>
+                Configure USDC Withdrawal Role
+              </Button>
+            </Form>
           )}
         </div>
 
@@ -409,6 +647,47 @@ export default function SafeDeployment() {
                 </Button>
               </Form>
             </>
+          )}
+        </div>
+
+        <div className="zodiac-roles" style={{ marginTop: 64 }}>
+          <Title level={3}>Zodiac Roles - USDC Withdrawal</Title>
+          
+          {rolesModAddress && (
+            <Card title="USDC Withdrawal Role" style={{ marginBottom: 16 }}>
+              <Text strong>Roles Modifier Address:</Text> <Text copyable>{rolesModAddress}</Text>
+              <br />
+              <Text strong>Role Member:</Text> <Text copyable>{rolesMemberAddress}</Text>
+              <br />
+              <Text strong>Withdrawal Method:</Text> {withdrawUnderlying ? "redeemUnderlying" : "redeem"}
+              
+              <Divider />
+              
+              <Form layout="vertical">
+                <Form.Item label="Safe Address">
+                  <Input 
+                    value={selectedSafe} 
+                    disabled 
+                    placeholder="Select a Safe from above"
+                  />
+                </Form.Item>
+                <Form.Item label="USDC Amount to Withdraw">
+                  <Input 
+                    value={usdcWithdrawalAmount} 
+                    onChange={(e) => setUsdcWithdrawalAmount(e.target.value)} 
+                    placeholder="Amount of USDC to withdraw"
+                  />
+                </Form.Item>
+                <Button 
+                  type="primary" 
+                  onClick={handleUsdcWithdrawal} 
+                  loading={loading.withdraw}
+                  disabled={!selectedSafe || !usdcWithdrawalAmount}
+                >
+                  Execute USDC Withdrawal
+                </Button>
+              </Form>
+            </Card>
           )}
         </div>
       </Content>

@@ -20,7 +20,7 @@ import Safe, {
   SafeAccountConfig,
 } from "@safe-global/protocol-kit";
 import { createPublicClient, http, encodeFunctionData, parseAbi } from "viem";
-import { gnosisChiado } from "viem/chains";
+import { gnosis } from "viem/chains";
 
 import { fetchSafesByOwner } from "@/lib/api";
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
@@ -144,7 +144,7 @@ export default function SafeDeployment() {
       };
 
       const kit = await Safe.init({
-        provider: gnosisChiado.rpcUrls.default.http[0],
+        provider: gnosis.rpcUrls.default.http[0],
         signer: signerKey,
         predictedSafe,
       });
@@ -198,13 +198,13 @@ export default function SafeDeployment() {
         to: deploymentTx.to,
         value: BigInt(deploymentTx.value),
         data: deploymentTx.data as `0x${string}`,
-        chain: gnosisChiado,
+        chain: gnosis,
       });
       setTxHash(hash);
 
       const client = createPublicClient({
-        chain: gnosisChiado,
-        transport: http(gnosisChiado.rpcUrls.default.http[0]),
+        chain: gnosis,
+        transport: http(gnosis.rpcUrls.default.http[0]),
       });
       const receipt = await client.waitForTransactionReceipt({ hash });
       setTxReceipt(receipt);
@@ -276,13 +276,13 @@ export default function SafeDeployment() {
         to: txTo,
         value: BigInt(txValue || "0"),
         data: txData as `0x${string}`,
-        chain: gnosisChiado,
+        chain: gnosis,
       });
       setTxHash(hash);
 
       const client = createPublicClient({
-        chain: gnosisChiado,
-        transport: http(gnosisChiado.rpcUrls.default.http[0]),
+        chain: gnosis,
+        transport: http(gnosis.rpcUrls.default.http[0]),
       });
       const receipt = await client.waitForTransactionReceipt({ hash });
       setTxReceipt(receipt);
@@ -458,12 +458,12 @@ export default function SafeDeployment() {
         to: execWithRoleTx.to,
         value: BigInt(execWithRoleTx.value),
         data: execWithRoleTx.data as `0x${string}`,
-        chain: gnosisChiado,
+        chain: gnosis,
       });
       
       const client = createPublicClient({
-        chain: gnosisChiado,
-        transport: http(gnosisChiado.rpcUrls.default.http[0]),
+        chain: gnosis,
+        transport: http(gnosis.rpcUrls.default.http[0]),
       });
       const receipt = await client.waitForTransactionReceipt({ hash });
       
@@ -498,7 +498,7 @@ export default function SafeDeployment() {
             textAlign: 'center',
           }}
         >
-          Safe Deployment (Chiado Testnet)
+          Safe Deployment (Gnosis Mainnet)
         </Title>
       </Header>
 

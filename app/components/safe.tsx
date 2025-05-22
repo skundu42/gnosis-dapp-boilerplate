@@ -304,6 +304,13 @@ function SafeDeploymentInner() {
         description: 'Add at least one member and the USDC spender address.',
       });
     }
+    
+    if (!usdcSpender.startsWith('0x') || usdcSpender.length !== 42) {
+      return notification.error({
+        message: 'Invalid USDC spender address',
+        description: 'Please enter a valid Ethereum address for the USDC spender.',
+      });
+    }
 
     setLoading((l) => ({ ...l, rolesGen: true }));
     try {
@@ -315,10 +322,20 @@ function SafeDeploymentInner() {
             {
               targetAddress: GNOSIS_USDC_ADDRESS,
               signature: 'approve(address,uint256)',
+              conditions: {
+                params: [usdcSpender],
+              },
             },
             {
               targetAddress: GNOSIS_USDC_ADDRESS,
               signature: 'transfer(address,uint256)',
+            },
+            {
+              targetAddress: GNOSIS_USDC_ADDRESS,
+              signature: 'transferFrom(address,address,uint256)',
+              conditions: {
+                params: [selectedSafe],
+              },
             },
           ],
         },
@@ -372,7 +389,7 @@ function SafeDeploymentInner() {
 
         notification.success({
           message: 'Roles module setup initiated!',
-          description: `Safe Tx hash: ${result.safeTxHash}`,
+          description: `Safe Tx hash: ${result.safeTxHash}. The spender Safe (${usdcSpender.slice(0, 6)}...) can now withdraw USDC from this Safe.`,
         });
       } else {
         /* ───── Path 2 — outside Safe UI ───── */
@@ -398,15 +415,16 @@ function SafeDeploymentInner() {
 
         notification.success({
           message: 'Roles module setup executed',
-          description: `Safe Tx hash: ${executeTxResponse.hash}`,
+          description: `Safe Tx hash: ${executeTxResponse.hash}. The spender Safe (${usdcSpender.slice(0, 6)}...) can now withdraw USDC from this Safe.`,
         });
       }
 
       setRolesTxs([]);
     } catch (err: any) {
+      const errorMessage = err.message || 'Unknown error occurred';
       notification.error({
         message: 'Roles execution failed',
-        description: err.message || 'Unknown error occurred',
+        description: `Error: ${errorMessage.slice(0, 100)}${errorMessage.length > 100 ? '...' : ''}`,
       });
     } finally {
       setLoading((l) => ({ ...l, rolesExec: false }));
@@ -607,7 +625,10 @@ function SafeDeploymentInner() {
 
             {/* Zodiac Roles UI */}
             <Divider style={{ marginTop: 48 }} />
-            <Title level={4}>Set up Zodiac Roles Module</Title>
+            <Title level={4}>Set up Zodiac Roles Module for USDC Withdrawal</Title>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+              This allows another Safe to withdraw USDC from this Safe using the Roles module.
+            </Text>
             <Form layout="vertical">
               <Form.Item label="Role key (identifier)">
                 <Input
@@ -621,10 +642,14 @@ function SafeDeploymentInner() {
                   onChange={(e) => setRoleMembersInput(e.target.value)}
                 />
               </Form.Item>
-              <Form.Item label="USDC spender (for approve permission)">
+              <Form.Item 
+                label="USDC spender (for approve permission)" 
+                tooltip="The Safe address that will be allowed to withdraw USDC from this Safe"
+              >
                 <Input
                   value={usdcSpender}
                   onChange={(e) => setUsdcSpender(e.target.value)}
+                  placeholder="0x... (Safe address with withdrawal permission)"
                 />
               </Form.Item>
 
@@ -650,6 +675,17 @@ function SafeDeploymentInner() {
               <Text type="secondary">
                 {rolesTxs.length} transaction(s) ready – click &quot;Execute&quot; to send them.
               </Text>
+            )}
+            
+            {usdcSpender && (
+              <div style={{ marginTop: 16, padding: 16, background: '#f9f9f9', borderRadius: 8 }}>
+                <Text strong>How it works:</Text>
+                <ul style={{ marginTop: 8 }}>
+                  <li>After setup, the Safe <Text code>{usdcSpender.slice(0, 6)}...{usdcSpender.slice(-4)}</Text> will be able to withdraw USDC from this Safe.</li>
+                  <li>The withdrawal will use the USDC approve + transferFrom pattern.</li>
+                  <li>Only members of the role <Text code>{roleKey}</Text> can perform this action.</li>
+                </ul>
+              </div>
             )}
 
             {!connected && (

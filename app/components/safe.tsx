@@ -17,8 +17,8 @@ import {
 import Safe, {
   PredictedSafeProps,
   SafeAccountConfig,
-  SafeTransactionDataPartial,
 } from '@safe-global/protocol-kit';
+import { SafeTransactionDataPartial } from '@safe-global/safe-core-sdk-types';
 import { createPublicClient, http, stringToHex } from 'viem';
 import { gnosis } from 'viem/chains';
 import { fetchSafesByOwner } from '@/lib/api';
@@ -192,6 +192,9 @@ function SafeDeploymentInner() {
     setLoading((l) => ({ ...l, execute: true }));
     try {
       const signer = await protocolKit.getSafeProvider().getExternalSigner();
+      if (!signer) {
+        throw new Error('No external signer available');
+      }
       const hash = await signer.sendTransaction({
         to: deploymentTx.to,
         value: BigInt(deploymentTx.value),
@@ -264,6 +267,9 @@ function SafeDeploymentInner() {
       const kitConnected = await protocolKit.connect({ safeAddress: selectedSafe });
       setProtocolKit(kitConnected);
       const signer = await kitConnected.getSafeProvider().getExternalSigner();
+      if (!signer) {
+        throw new Error('No external signer available');
+      }
       const hash = await signer.sendTransaction({
         to: txTo,
         value: BigInt(txValue || '0'),
@@ -324,9 +330,6 @@ function SafeDeploymentInner() {
         owner: selectedSafe as `0x${string}`,
         roles,
         enableOnTarget: true,
-        // 🆕 make network explicit & bypass undeployed helper
-        chainId: GNOSIS_CHAIN_ID,
-        safeWebAuthnSignerFactory: ZERO_ADDRESS,
       });
 
       setRolesTxs(txs);
@@ -376,20 +379,21 @@ function SafeDeploymentInner() {
         if (!primaryWallet)
           throw new Error('No connected wallet found for direct Safe execution.');
 
-        const signer = await getSigner(primaryWallet, true);
+        const signer = await getSigner(primaryWallet);
 
+        const signerAddress = await signer.getAddress();
         const kit = await Safe.init({
           provider: gnosis.rpcUrls.default.http[0],
-          signer,
+          signer: signerAddress, // Use signer address which is compatible with Safe SDK
           safeAddress: selectedSafe,
         });
 
         const safeTx = await kit.createTransaction({
-          safeTransactionData: rolesTxs as SafeTransactionDataPartial[],
+          transactions: rolesTxs as SafeTransactionDataPartial[],
         });
 
         const txHash = await kit.getTransactionHash(safeTx);
-        await kit.signTransactionHash(txHash);
+        await kit.signTransaction(safeTx); // Use signTransaction instead of signTransactionHash
         const executeTxResponse = await kit.executeTransaction(safeTx);
 
         notification.success({
@@ -666,7 +670,7 @@ function SafeDeploymentInner() {
 /* -------------------------------------------------------------------------- */
 export default function SafeDeployment() {
   return (
-    <SafeProvider loader={null}>
+    <SafeProvider loader={<div>Loading...</div>}>
       <SafeDeploymentInner />
     </SafeProvider>
   );

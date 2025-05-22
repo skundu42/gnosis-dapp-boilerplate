@@ -1,7 +1,7 @@
 import SafeDeployment from '@/app/components/safe';
 
 export const metadata = {
-  title: 'Shutter RPS | Gnosis Dapp Boilerplate',
+  title: 'Safe | Gnosis Dapp Boilerplate',
 };
 
 export default function SafePage() {

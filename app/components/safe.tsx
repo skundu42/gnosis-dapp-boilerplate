@@ -107,8 +107,6 @@ export default function SafeDeployment() {
     { title: "Create Deployment Tx" },
     { title: "Execute Transaction" },
     { title: "Finalize & Verify" },
-    { title: "Setup Zodiac Roles" },
-    { title: "Configure USDC Withdrawal Role" },
   ];
 
   /* ------------------------------ Helpers --------------------------------- */
@@ -346,7 +344,6 @@ export default function SafeDeployment() {
         description: `Address: ${calculatedRolesAddress}` 
       });
       
-      setCurrentStep(6);
     } catch (err: any) {
       notification.error({ message: "Roles setup failed", description: err.message });
     } finally {
@@ -409,7 +406,6 @@ export default function SafeDeployment() {
         description: `Role assigned to ${rolesMemberAddress}` 
       });
       
-      setCurrentStep(7);
     } catch (err: any) {
       notification.error({ message: "Role setup failed", description: err.message });
     } finally {
@@ -565,35 +561,7 @@ export default function SafeDeployment() {
               <Text strong>Owners:</Text> {deployedOwners.join(", ")}
               <br />
               <Text strong>Threshold:</Text> {deployedThreshold}
-              <br /><br />
-              <Button type="primary" onClick={handleDeployRolesModifier} loading={loading.rolesSetup}>
-                Setup Zodiac Roles Modifier
-              </Button>
             </div>
-          )}
-          
-          {currentStep === 6 && (
-            <Form layout="vertical">
-              <Form.Item label="Roles Member Address">
-                <Input 
-                  value={rolesMemberAddress} 
-                  onChange={(e) => setRolesMemberAddress(e.target.value)}
-                  placeholder="Address that will be assigned the USDC withdrawal role"
-                />
-              </Form.Item>
-              <Form.Item label="Withdraw Underlying USDC">
-                <Switch 
-                  checked={withdrawUnderlying}
-                  onChange={(checked) => setWithdrawUnderlying(checked)}
-                />
-                <Text type="secondary" style={{ marginLeft: 8 }}>
-                  Toggle to use redeemUnderlying instead of redeem
-                </Text>
-              </Form.Item>
-              <Button type="primary" onClick={handleSetupUsdcRole} loading={loading.roleSetup}>
-                Configure USDC Withdrawal Role
-              </Button>
-            </Form>
           )}
         </div>
 
@@ -653,41 +621,93 @@ export default function SafeDeployment() {
         <div className="zodiac-roles" style={{ marginTop: 64 }}>
           <Title level={3}>Zodiac Roles - USDC Withdrawal</Title>
           
+          <Card title="Setup Zodiac Roles Modifier" style={{ marginBottom: 16 }}>
+            <Form layout="vertical">
+              <Form.Item label="Safe Address">
+                <Input 
+                  value={safeAddress} 
+                  onChange={(e) => setSafeAddress(e.target.value)}
+                  placeholder="Enter Safe address or deploy a Safe above"
+                />
+              </Form.Item>
+              <Button 
+                type="primary" 
+                onClick={handleDeployRolesModifier} 
+                loading={loading.rolesSetup}
+                disabled={!safeAddress}
+              >
+                Deploy Roles Modifier
+              </Button>
+            </Form>
+          </Card>
+          
           {rolesModAddress && (
-            <Card title="USDC Withdrawal Role" style={{ marginBottom: 16 }}>
-              <Text strong>Roles Modifier Address:</Text> <Text copyable>{rolesModAddress}</Text>
-              <br />
-              <Text strong>Role Member:</Text> <Text copyable>{rolesMemberAddress}</Text>
-              <br />
-              <Text strong>Withdrawal Method:</Text> {withdrawUnderlying ? "redeemUnderlying" : "redeem"}
+            <>
+              <Card title="Configure USDC Withdrawal Role" style={{ marginBottom: 16 }}>
+                <Text strong>Roles Modifier Address:</Text> <Text copyable>{rolesModAddress}</Text>
+                <br /><br />
+                
+                <Form layout="vertical">
+                  <Form.Item label="Roles Member Address">
+                    <Input 
+                      value={rolesMemberAddress} 
+                      onChange={(e) => setRolesMemberAddress(e.target.value)}
+                      placeholder="Address that will be assigned the USDC withdrawal role"
+                    />
+                  </Form.Item>
+                  <Form.Item label="Withdraw Underlying USDC">
+                    <Switch 
+                      checked={withdrawUnderlying}
+                      onChange={(checked) => setWithdrawUnderlying(checked)}
+                    />
+                    <Text type="secondary" style={{ marginLeft: 8 }}>
+                      Toggle to use redeemUnderlying instead of redeem
+                    </Text>
+                  </Form.Item>
+                  <Button 
+                    type="primary" 
+                    onClick={handleSetupUsdcRole} 
+                    loading={loading.roleSetup}
+                    disabled={!rolesMemberAddress}
+                  >
+                    Configure USDC Withdrawal Role
+                  </Button>
+                </Form>
+              </Card>
               
-              <Divider />
-              
-              <Form layout="vertical">
-                <Form.Item label="Safe Address">
-                  <Input 
-                    value={selectedSafe} 
-                    disabled 
-                    placeholder="Select a Safe from above"
-                  />
-                </Form.Item>
-                <Form.Item label="USDC Amount to Withdraw">
-                  <Input 
-                    value={usdcWithdrawalAmount} 
-                    onChange={(e) => setUsdcWithdrawalAmount(e.target.value)} 
-                    placeholder="Amount of USDC to withdraw"
-                  />
-                </Form.Item>
-                <Button 
-                  type="primary" 
-                  onClick={handleUsdcWithdrawal} 
-                  loading={loading.withdraw}
-                  disabled={!selectedSafe || !usdcWithdrawalAmount}
-                >
-                  Execute USDC Withdrawal
-                </Button>
-              </Form>
-            </Card>
+              <Card title="USDC Withdrawal" style={{ marginBottom: 16 }}>
+                <Text strong>Role Member:</Text> <Text copyable>{rolesMemberAddress || "Not configured"}</Text>
+                <br />
+                <Text strong>Withdrawal Method:</Text> {withdrawUnderlying ? "redeemUnderlying" : "redeem"}
+                
+                <Divider />
+                
+                <Form layout="vertical">
+                  <Form.Item label="Safe Address">
+                    <Input 
+                      value={selectedSafe} 
+                      disabled 
+                      placeholder="Select a Safe from above"
+                    />
+                  </Form.Item>
+                  <Form.Item label="USDC Amount to Withdraw">
+                    <Input 
+                      value={usdcWithdrawalAmount} 
+                      onChange={(e) => setUsdcWithdrawalAmount(e.target.value)} 
+                      placeholder="Amount of USDC to withdraw"
+                    />
+                  </Form.Item>
+                  <Button 
+                    type="primary" 
+                    onClick={handleUsdcWithdrawal} 
+                    loading={loading.withdraw}
+                    disabled={!selectedSafe || !usdcWithdrawalAmount}
+                  >
+                    Execute USDC Withdrawal
+                  </Button>
+                </Form>
+              </Card>
+            </>
           )}
         </div>
       </Content>
